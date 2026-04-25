@@ -26,3 +26,23 @@ class TestGetProvider:
     def test_invalid_provider_raises(self):
         with pytest.raises(ValueError, match="Unknown provider type"):
             get_provider("invalid")
+
+    def test_get_provider_loads_saved_llm_env(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.delenv("LLM_PROVIDER", raising=False)
+        monkeypatch.delenv("LLM_MODEL", raising=False)
+        tmp_path.joinpath(".llm.env").write_text("LLM_PROVIDER=ollama\nLLM_MODEL=mistral\n")
+
+        provider = get_provider()
+
+        assert isinstance(provider, OllamaProvider)
+        assert provider.get_default_model() == "mistral"
+
+    def test_get_provider_keeps_environment_precedence_over_saved_llm_env(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("LLM_PROVIDER", "openai")
+        tmp_path.joinpath(".llm.env").write_text("LLM_PROVIDER=ollama\nLLM_MODEL=mistral\n")
+
+        provider = get_provider()
+
+        assert isinstance(provider, OpenAIProvider)
